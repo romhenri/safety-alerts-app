@@ -1,0 +1,185 @@
+"use client";
+
+import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { deleteIncident, fetchIncidents, patchGuardStatus } from "@/lib/api";
+import { labelGuardStatus, shortLabelGuardStatus } from "@/lib/guardLabels";
+import type { Incident } from "@/lib/types";
+
+function labelTipo(t: string) {
+  const m: Record<string, string> = {
+    assalto: "Assalto",
+    area_escura: "Área escura",
+    suspeito: "Suspeito",
+    outros: "Outros",
+  };
+  return m[t] ?? t;
+}
+
+export default function GuardPage() {
+  const [items, setItems] = useState<Incident[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [actingId, setActingId] = useState<number | null>(null);
+  const actingRef = useRef(false);
+
+  const load = useCallback(async () => {
+    setError(null);
+    setLoading(true);
+    try {
+      const data = await fetchIncidents();
+      setItems(data);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erro");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+    const id = setInterval(() => {
+      if (!actingRef.current) load();
+    }, 15000);
+    return () => clearInterval(id);
+  }, [load]);
+
+  async function onConfirmGoing(id: number) {
+    actingRef.current = true;
+    setActingId(id);
+    setError(null);
+    try {
+      await deleteIncident(id);
+      setItems((prev) => prev.filter((x) => x.id !== id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao remover");
+    } finally {
+      actingRef.current = false;
+      setActingId(null);
+    }
+  }
+
+  async function onDecline(id: number) {
+    actingRef.current = true;
+    setActingId(id);
+    setError(null);
+    try {
+      const updated = await patchGuardStatus(id, "not_going");
+      setItems((prev) => prev.map((x) => (x.id === id ? updated : x)));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao atualizar");
+    } finally {
+      actingRef.current = false;
+      setActingId(null);
+    }
+  }
+
+  const orderedItems = [...items].sort((a, b) => {
+    if (a.guard_status === "pending" && b.guard_status !== "pending") return -1;
+    if (a.guard_status !== "pending" && b.guard_status === "pending") return 1;
+    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+  });
+
+  return (
+    <div className="mx-auto flex w-full max-w-2xl flex-1 flex-col gap-4 px-4 py-8">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Central do guarda
+          </h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Alertas recebidos: confirme se vai ao local.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => load()}
+          disabled={loading}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-800 shadow-sm hover:bg-slate-50 disabled:opacity-60"
+        >
+          <RefreshCw
+            className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+            aria-hidden
+          />
+          Atualizar
+        </button>
+      </div>
+
+      {error ? (
+        <p className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {error}
+        </p>
+      ) : null}
+
+      {loading && items.length === 0 ? (
+        <p className="text-sm text-slate-500">Carregando alertas…</p>
+      ) : null}
+
+      <ul className="flex flex-col gap-4">
+        {orderedItems.map((i) => (
+          <li
+            key={i.id}
+            className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-2">
+              <div>
+                <span className="font-semibold text-slate-900">
+                  {labelTipo(i.tipo)}
+                </span>
+                <p className="mt-1 text-xs text-slate-500">
+                  {new Date(i.timestamp).toLocaleString()}
+                </p>
+              </div>
+              <span
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  i.guard_status === "pending"
+                    ? "bg-amber-100 text-amber-900"
+                    : i.guard_status === "going"
+                      ? "bg-emerald-100 text-emerald-900"
+                      : "bg-slate-200 text-slate-800"
+                }`}
+              >
+                {shortLabelGuardStatus(i.guard_status)}
+              </span>
+            </div>
+            {i.descricao ? (
+              <p className="mt-3 text-sm text-slate-800">{i.descricao}</p>
+            ) : null}
+            <p className="mt-2 font-mono text-xs text-slate-500">
+              {i.lat.toFixed(5)}, {i.lng.toFixed(5)}
+            </p>
+            <p className="mt-3 text-sm text-slate-600">
+              {labelGuardStatus(i.guard_status)}
+            </p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                disabled={actingId === i.id}
+                onClick={() => onConfirmGoing(i.id)}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 sm:flex-initial sm:min-w-[160px]"
+              >
+                <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
+                {actingId === i.id ? "…" : "Confirmo que vou"}
+              </button>
+              <button
+                type="button"
+                disabled={actingId === i.id}
+                onClick={() => onDecline(i.id)}
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-60 sm:flex-initial sm:min-w-[160px]"
+              >
+                <XCircle className="h-4 w-4 shrink-0" aria-hidden />
+                {actingId === i.id ? "…" : "Não posso ir"}
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {!loading && orderedItems.length === 0 && !error ? (
+        <p className="text-center text-sm text-slate-500">
+          Nenhum alerta no momento.
+        </p>
+      ) : null}
+    </div>
+  );
+}
