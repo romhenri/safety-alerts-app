@@ -1,22 +1,26 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { deleteIncident, fetchIncidents, patchGuardStatus } from "@/lib/api";
 import { labelGuardStatus, shortLabelGuardStatus } from "@/lib/guardLabels";
+import { labelIncidentTipo } from "@/lib/incidentLabels";
 import type { Incident } from "@/lib/types";
 
-function labelTipo(t: string) {
-  const m: Record<string, string> = {
-    assalto: "Assalto",
-    area_escura: "Área escura",
-    suspeito: "Suspeito",
-    outros: "Outros",
-  };
-  return m[t] ?? t;
-}
+const IncidentMapPreview = dynamic(
+  () => import("@/components/IncidentMapPreview"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-44 w-full items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-xs text-slate-500">
+        Carregando mapa…
+      </div>
+    ),
+  },
+);
 
-export default function GuardPage() {
+export function GuardHubScreen() {
   const [items, setItems] = useState<Incident[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -124,7 +128,7 @@ export default function GuardPage() {
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
                 <span className="font-semibold text-slate-900">
-                  {labelTipo(i.tipo)}
+                  {labelIncidentTipo(i.tipo)}
                 </span>
                 <p className="mt-1 text-xs text-slate-500">
                   {new Date(i.timestamp).toLocaleString()}
@@ -142,12 +146,18 @@ export default function GuardPage() {
                 {shortLabelGuardStatus(i.guard_status)}
               </span>
             </div>
+            <div className="mt-3">
+              <p className="mb-1.5 text-xs font-medium text-slate-600">
+                Local do alerta
+              </p>
+              <IncidentMapPreview lat={i.lat} lng={i.lng} tipo={i.tipo} />
+              <p className="mt-1.5 font-mono text-xs text-slate-500">
+                {i.lat.toFixed(5)}, {i.lng.toFixed(5)}
+              </p>
+            </div>
             {i.descricao ? (
               <p className="mt-3 text-sm text-slate-800">{i.descricao}</p>
             ) : null}
-            <p className="mt-2 font-mono text-xs text-slate-500">
-              {i.lat.toFixed(5)}, {i.lng.toFixed(5)}
-            </p>
             <p className="mt-3 text-sm text-slate-600">
               {labelGuardStatus(i.guard_status)}
             </p>

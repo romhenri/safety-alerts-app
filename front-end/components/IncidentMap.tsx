@@ -11,14 +11,9 @@ import {
 import "leaflet/dist/leaflet.css";
 import { UFPB_MAP_CENTER, UFPB_MAP_ZOOM } from "@/lib/campus";
 import { shortLabelGuardStatus } from "@/lib/guardLabels";
+import { colorForIncidentTipo } from "@/lib/incidentColors";
+import { labelIncidentTipo } from "@/lib/incidentLabels";
 import type { Incident } from "@/lib/types";
-
-const colorByType: Record<string, string> = {
-  assalto: "#dc2626",
-  area_escura: "#4c1d95",
-  suspeito: "#ea580c",
-  outros: "#64748b",
-};
 
 function MapRecenter({
   center,
@@ -32,16 +27,6 @@ function MapRecenter({
     map.setView(center, zoom);
   }, [map, center, zoom]);
   return null;
-}
-
-function labelForTipo(t: string) {
-  const map: Record<string, string> = {
-    assalto: "Assalto",
-    area_escura: "Área escura",
-    suspeito: "Suspeito",
-    outros: "Outros",
-  };
-  return map[t] ?? t;
 }
 
 export default function IncidentMap({ incidents }: { incidents: Incident[] }) {
@@ -61,7 +46,7 @@ export default function IncidentMap({ incidents }: { incidents: Incident[] }) {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {incidents.map((i) => {
-        const fill = colorByType[i.tipo] ?? "#2563eb";
+        const fill = colorForIncidentTipo(i.tipo);
         return (
           <CircleMarker
             key={i.id}
@@ -77,7 +62,7 @@ export default function IncidentMap({ incidents }: { incidents: Incident[] }) {
             <Popup>
               <div className="min-w-[180px] text-sm">
                 <p className="font-semibold text-slate-900">
-                  {labelForTipo(i.tipo)}
+                  {labelIncidentTipo(i.tipo)}
                 </p>
                 {i.descricao ? (
                   <p className="mt-1 text-slate-600">{i.descricao}</p>

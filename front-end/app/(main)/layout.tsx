@@ -9,7 +9,7 @@ export default function MainLayout({
   return (
     <AuthGate>
       <div className="flex min-h-full flex-1 flex-col">
-        <MainNav />
+        <MainNav variant="student" />
         <main className="flex flex-1 flex-col pb-[calc(4.5rem+env(safe-area-inset-bottom))] md:pb-0">
           {children}
         </main>
