@@ -1,7 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { fetchIncidents } from "@/lib/api";
 import type { Incident } from "@/lib/types";
@@ -44,7 +45,7 @@ export default function MapPage() {
   }, [load]);
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-6">
+    <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-4 px-4 py-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">
@@ -75,6 +76,13 @@ export default function MapPage() {
       <div className="relative h-[min(70vh,560px)] w-full overflow-hidden rounded-xl border border-slate-200 shadow-sm">
         <IncidentMap incidents={incidents} />
       </div>
+      <Link
+        href="/report?emergency=1"
+        className="flex w-full max-w-md items-center justify-center gap-3 self-center rounded-2xl bg-[var(--brand-yellow)] px-5 py-4 text-base font-bold text-[var(--brand-blue)] shadow-lg transition hover:brightness-95 active:scale-[0.99] sm:text-lg"
+      >
+        <AlertTriangle className="h-7 w-7 shrink-0" aria-hidden />
+        Emergência: ajustar ponto e reportar
+      </Link>
       <p className="text-center text-xs text-slate-500">
         Círculos indicam densidade de alertas na região.
       </p>

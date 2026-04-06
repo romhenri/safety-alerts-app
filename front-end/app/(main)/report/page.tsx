@@ -1,8 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { AlertTriangle, LocateFixed, Send } from "lucide-react";
-import { useCallback, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { LocateFixed, Send } from "lucide-react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { createIncident } from "@/lib/api";
 import { campusPosition } from "@/lib/campus";
 import { INCIDENT_CATEGORIES } from "@/lib/types";
@@ -19,7 +20,9 @@ const ReportLocationPreview = dynamic(
   },
 );
 
-export default function ReportPage() {
+function ReportPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const formRef = useRef<HTMLFormElement>(null);
   const [tipo, setTipo] = useState<string>("suspeito");
   const [descricao, setDescricao] = useState("");
@@ -65,10 +68,12 @@ export default function ReportPage() {
     );
   }, []);
 
-  const onEmergency = useCallback(() => {
+  useEffect(() => {
+    if (searchParams.get("emergency") !== "1") return;
     formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     captureLocation();
-  }, [captureLocation]);
+    router.replace("/report", { scroll: false });
+  }, [searchParams, captureLocation, router]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -97,7 +102,7 @@ export default function ReportPage() {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-4 py-8">
+    <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-2 px-4 py-4">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">
           Reportar incidente
@@ -106,15 +111,6 @@ export default function ReportPage() {
           Envie sua posição com o alerta para o mapa da comunidade.
         </p>
       </div>
-
-      <button
-        type="button"
-        onClick={onEmergency}
-        className="flex w-full items-center justify-center gap-3 rounded-2xl bg-[var(--brand-yellow)] px-6 py-5 text-lg font-bold text-[var(--brand-blue)] shadow-lg transition hover:brightness-95 active:scale-[0.99]"
-      >
-        <AlertTriangle className="h-8 w-8 shrink-0" aria-hidden />
-        Emergência: ajustar ponto e reportar
-      </button>
 
       <form
         ref={formRef}
@@ -192,5 +188,19 @@ export default function ReportPage() {
         </p>
       ) : null}
     </div>
+  );
+}
+
+export default function ReportPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-4 py-4">
+          <p className="text-sm text-slate-600">Carregando…</p>
+        </div>
+      }
+    >
+      <ReportPageInner />
+    </Suspense>
   );
 }
