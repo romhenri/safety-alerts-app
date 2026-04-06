@@ -19,11 +19,37 @@ export default function ReportPage() {
 
   const captureLocation = useCallback(() => {
     setMessage(null);
-    setGeoStatus("Obtendo localização…");
-    window.setTimeout(() => {
-      setPosition(campusPosition());
-      setGeoStatus(null);
-    }, 350);
+    if (!("geolocation" in navigator)) {
+      setGeoStatus("Geolocalização não suportada neste navegador.");
+      return;
+    }
+
+    setGeoStatus("Obtendo localização real…");
+    navigator.geolocation.getCurrentPosition(
+      (coords) => {
+        setPosition({
+          lat: coords.coords.latitude,
+          lng: coords.coords.longitude,
+        });
+        setGeoStatus(null);
+      },
+      (error) => {
+        if (error.code === error.PERMISSION_DENIED) {
+          setGeoStatus("Permissão negada para acessar sua localização.");
+          return;
+        }
+        if (error.code === error.TIMEOUT) {
+          setGeoStatus("Tempo esgotado ao obter localização.");
+          return;
+        }
+        setGeoStatus("Não foi possível obter sua localização atual.");
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10_000,
+        maximumAge: 0,
+      },
+    );
   }, []);
 
   const onEmergency = useCallback(() => {
