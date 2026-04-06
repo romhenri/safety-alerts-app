@@ -1,10 +1,23 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { AlertTriangle, LocateFixed, Send } from "lucide-react";
 import { useCallback, useRef, useState } from "react";
 import { createIncident } from "@/lib/api";
 import { campusPosition } from "@/lib/campus";
 import { INCIDENT_CATEGORIES } from "@/lib/types";
+
+const ReportLocationPreview = dynamic(
+  () => import("@/components/ReportLocationPreview"),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="mt-3 flex h-[220px] items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-100 text-sm text-slate-500">
+        Carregando mapa…
+      </div>
+    ),
+  },
+);
 
 export default function ReportPage() {
   const formRef = useRef<HTMLFormElement>(null);
@@ -139,9 +152,9 @@ export default function ReportPage() {
           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
             Sua localização
           </p>
-          <p className="mt-2 font-mono text-sm text-slate-800">
-            {position.lat.toFixed(6)}, {position.lng.toFixed(6)}
+          <p className="mt-1 text-sm text-slate-600">
           </p>
+          <ReportLocationPreview lat={position.lat} lng={position.lng} />
           {geoStatus ? (
             <p className="mt-2 text-sm text-[var(--brand-blue)]">{geoStatus}</p>
           ) : null}
