@@ -1,10 +1,9 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { AlertTriangle, RefreshCw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { fetchIncidents } from "@/lib/api";
+import { createIncident, fetchIncidents } from "@/lib/api";
 import type { Incident } from "@/lib/types";
 
 const IncidentMap = dynamic(() => import("@/components/IncidentMap"), {
@@ -34,6 +33,71 @@ export function IncidentMapScreen({
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [emergencySending, setEmergencySending] = useState(false);
+  const [emergencyNotice, setEmergencyNotice] = useState<{
+    ok: boolean;
+    text: string;
+  } | null>(null);
+
+  const submitEmergencyReport = useCallback(async () => {
+    setEmergencyNotice(null);
+    if (!("geolocation" in navigator)) {
+      setEmergencyNotice({
+        ok: false,
+        text: "Geolocalização não suportada neste navegador.",
+      });
+      return;
+    }
+
+    setEmergencySending(true);
+    try {
+      const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, {
+          enableHighAccuracy: true,
+          timeout: 10_000,
+          maximumAge: 0,
+        });
+      });
+
+      await createIncident({
+        tipo: "emergencia",
+        descricao: "Alerta de emergência (um toque).",
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      });
+
+      setEmergencyNotice({
+        ok: true,
+        text: "Emergência registrada. O mapa foi atualizado com seu alerta.",
+      });
+      const data = await fetchIncidents();
+      setIncidents(data);
+    } catch (e) {
+      if (e instanceof GeolocationPositionError) {
+        if (e.code === e.PERMISSION_DENIED) {
+          setEmergencyNotice({
+            ok: false,
+            text: "Permissão de localização negada. Ative para enviar o alerta de emergência.",
+          });
+          return;
+        }
+        if (e.code === e.TIMEOUT) {
+          setEmergencyNotice({
+            ok: false,
+            text: "Tempo esgotado ao obter localização. Tente de novo.",
+          });
+          return;
+        }
+      }
+      setEmergencyNotice({
+        ok: false,
+        text:
+          e instanceof Error ? e.message : "Não foi possível enviar o alerta.",
+      });
+    } finally {
+      setEmergencySending(false);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setError(null);
@@ -85,13 +149,29 @@ export function IncidentMapScreen({
         <IncidentMap incidents={incidents} />
       </div>
       {showEmergencyCta ? (
-        <Link
-          href="/report?emergency=1"
-          className="flex w-full max-w-md items-center justify-center gap-3 self-center rounded-2xl bg-[var(--brand-yellow)] px-5 py-4 text-base font-bold text-[var(--brand-blue)] shadow-lg transition hover:brightness-95 active:scale-[0.99] sm:text-lg"
-        >
-          <AlertTriangle className="h-7 w-7 shrink-0" aria-hidden />
-          Emergência: ajustar ponto e reportar
-        </Link>
+        <div className="mx-auto flex w-full max-w-md flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => void submitEmergencyReport()}
+            disabled={emergencySending}
+            className="flex w-full items-center justify-center gap-3 rounded-2xl bg-[var(--brand-yellow)] px-5 py-4 text-base font-bold text-[var(--brand-blue)] shadow-lg transition hover:brightness-95 active:scale-[0.99] disabled:opacity-60 sm:text-lg"
+          >
+            <AlertTriangle className="h-7 w-7 shrink-0" aria-hidden />
+            {emergencySending ? "Enviando emergência…" : "Emergência: reportar agora"}
+          </button>
+          {emergencyNotice ? (
+            <p
+              className={`rounded-lg px-3 py-2 text-center text-sm ${
+                emergencyNotice.ok
+                  ? "border border-emerald-200 bg-emerald-50 text-emerald-900"
+                  : "border border-red-200 bg-red-50 text-red-900"
+              }`}
+              role="status"
+            >
+              {emergencyNotice.text}
+            </p>
+          ) : null}
+        </div>
       ) : null}
       <p className="text-center text-xs text-slate-500">
         Círculos indicam densidade de alertas na região.

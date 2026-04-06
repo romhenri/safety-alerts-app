@@ -1,9 +1,8 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useRouter, useSearchParams } from "next/navigation";
 import { LocateFixed, Send } from "lucide-react";
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { createIncident } from "@/lib/api";
 import { campusPosition } from "@/lib/campus";
 import { INCIDENT_CATEGORIES } from "@/lib/types";
@@ -20,10 +19,7 @@ const ReportLocationPreview = dynamic(
   },
 );
 
-function ReportPageInner() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const formRef = useRef<HTMLFormElement>(null);
+export default function ReportPage() {
   const [tipo, setTipo] = useState<string>("suspeito");
   const [descricao, setDescricao] = useState("");
   const [position, setPosition] = useState(() => campusPosition());
@@ -68,13 +64,6 @@ function ReportPageInner() {
     );
   }, []);
 
-  useEffect(() => {
-    if (searchParams.get("emergency") !== "1") return;
-    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    captureLocation();
-    router.replace("/report", { scroll: false });
-  }, [searchParams, captureLocation, router]);
-
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setMessage(null);
@@ -113,7 +102,6 @@ function ReportPageInner() {
       </div>
 
       <form
-        ref={formRef}
         onSubmit={onSubmit}
         className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"
       >
@@ -188,19 +176,5 @@ function ReportPageInner() {
         </p>
       ) : null}
     </div>
-  );
-}
-
-export default function ReportPage() {
-  return (
-    <Suspense
-      fallback={
-        <div className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-6 px-4 py-4">
-          <p className="text-sm text-slate-600">Carregando…</p>
-        </div>
-      }
-    >
-      <ReportPageInner />
-    </Suspense>
   );
 }

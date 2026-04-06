@@ -3,6 +3,7 @@ export const incidentTypeColor: Record<string, string> = {
   area_escura: "#4c1d95",
   suspeito: "#ea580c",
   outros: "#64748b",
+  emergencia: "#b91c1c",
 };
 
 export function colorForIncidentTipo(tipo: string): string {
