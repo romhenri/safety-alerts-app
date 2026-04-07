@@ -44,7 +44,7 @@ export function GuardHubScreen() {
     load();
     const id = setInterval(() => {
       if (!actingRef.current) load();
-    }, 15000);
+    }, 5000);
     return () => clearInterval(id);
   }, [load]);
 

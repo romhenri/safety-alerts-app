@@ -114,7 +114,7 @@ export function IncidentMapScreen({
 
   useEffect(() => {
     load();
-    const id = setInterval(load, 30000);
+    const id = setInterval(load, 5000);
     return () => clearInterval(id);
   }, [load]);
 
