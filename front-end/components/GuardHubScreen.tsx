@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { BadgeCheck, CheckCircle2, RefreshCw, XCircle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { deleteIncident, fetchIncidents, patchGuardStatus } from "@/lib/api";
+import { fetchIncidents, patchGuardStatus } from "@/lib/api";
 import { labelGuardStatus, shortLabelGuardStatus } from "@/lib/guardLabels";
 import { labelIncidentTipo } from "@/lib/incidentLabels";
 import type { Incident } from "@/lib/types";
@@ -83,17 +83,28 @@ export function GuardHubScreen() {
     setActingId(id);
     setError(null);
     try {
-      await deleteIncident(id);
-      setItems((prev) => prev.filter((x) => x.id !== id));
+      const updated = await patchGuardStatus(id, "solved");
+      setItems((prev) =>
+        prev
+          .map((x) => (x.id === id ? updated : x))
+          .filter(
+            (x) =>
+              x.guard_status !== "solved" && x.guard_status !== "canceled",
+          ),
+      );
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Falha ao remover");
+      setError(e instanceof Error ? e.message : "Falha ao atualizar");
     } finally {
       actingRef.current = false;
       setActingId(null);
     }
   }
 
-  const orderedItems = [...items].sort((a, b) => {
+  const hubItems = items.filter(
+    (i) => i.guard_status !== "solved" && i.guard_status !== "canceled",
+  );
+
+  const orderedItems = [...hubItems].sort((a, b) => {
     if (a.guard_status === "pending" && b.guard_status !== "pending") return -1;
     if (a.guard_status !== "pending" && b.guard_status === "pending") return 1;
     return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
@@ -155,7 +166,11 @@ export function GuardHubScreen() {
                     ? "bg-amber-100 text-amber-900"
                     : i.guard_status === "going"
                       ? "bg-emerald-100 text-emerald-900"
-                      : "bg-slate-200 text-slate-800"
+                      : i.guard_status === "solved"
+                        ? "bg-teal-100 text-teal-900"
+                        : i.guard_status === "canceled"
+                          ? "bg-red-100 text-red-900"
+                          : "bg-slate-200 text-slate-800"
                 }`}
               >
                 {shortLabelGuardStatus(i.guard_status)}

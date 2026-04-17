@@ -32,6 +32,9 @@ function MapRecenter({
 export default function IncidentMap({ incidents }: { incidents: Incident[] }) {
   const center = UFPB_MAP_CENTER;
   const zoom = UFPB_MAP_ZOOM;
+  const mapIncidents = incidents.filter(
+    (i) => i.guard_status !== "solved" && i.guard_status !== "canceled",
+  );
 
   return (
     <MapContainer
@@ -45,7 +48,7 @@ export default function IncidentMap({ incidents }: { incidents: Incident[] }) {
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-      {incidents.map((i) => {
+      {mapIncidents.map((i) => {
         const fill = colorForIncidentTipo(i.tipo);
         return (
           <CircleMarker

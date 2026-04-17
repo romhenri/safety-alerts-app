@@ -18,4 +18,4 @@ class Incident(Base):
     lat = Column(Float, nullable=False)
     lng = Column(Float, nullable=False)
     timestamp = Column(DateTime(timezone=True), nullable=False, default=utc_now)
-    guard_status = Column(String(20), nullable=False, default="pending")
+    guard_status = Column(String(32), nullable=False, default="pending")

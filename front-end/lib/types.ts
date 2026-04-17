@@ -1,4 +1,9 @@
-export type GuardStatus = "pending" | "going" | "not_going";
+export type GuardStatus =
+  | "pending"
+  | "going"
+  | "not_going"
+  | "canceled"
+  | "solved";
 
 export type Incident = {
   id: number;

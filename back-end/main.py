@@ -28,7 +28,7 @@ def migrate_sqlite():
         if "guard_status" not in cols:
             conn.execute(
                 text(
-                    "ALTER TABLE incidents ADD COLUMN guard_status VARCHAR(20) DEFAULT 'pending'"
+                    "ALTER TABLE incidents ADD COLUMN guard_status VARCHAR(32) DEFAULT 'pending'"
                 )
             )
 
@@ -45,8 +45,13 @@ def health():
 
 
 @app.get("/incidents", response_model=list[IncidentRead])
-def list_incidents(db: Session = Depends(get_db)):
+def list_incidents(
+    include_closed: bool = False,
+    db: Session = Depends(get_db),
+):
     stmt = select(Incident).order_by(Incident.timestamp.desc())
+    if not include_closed:
+        stmt = stmt.where(~Incident.guard_status.in_(["solved", "canceled"]))
     rows = db.execute(stmt).scalars().all()
     return rows
 
@@ -58,7 +63,7 @@ def create_incident(payload: IncidentCreate, db: Session = Depends(get_db)):
         descricao=payload.descricao.strip() if payload.descricao else None,
         lat=payload.lat,
         lng=payload.lng,
-        guard_status="pending",
+        guard_status=payload.guard_status,
     )
     db.add(row)
     db.commit()

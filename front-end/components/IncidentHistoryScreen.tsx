@@ -21,7 +21,7 @@ export function IncidentHistoryScreen({ title, subtitle }: Props) {
     setError(null);
     setLoading(true);
     try {
-      const data = await fetchIncidents();
+      const data = await fetchIncidents({ includeClosed: true });
       setItems(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erro");
