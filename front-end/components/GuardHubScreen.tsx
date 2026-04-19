@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { CheckCircle2, RefreshCw, XCircle } from "lucide-react";
+import { BadgeCheck, CheckCircle2, RefreshCw, XCircle } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { deleteIncident, fetchIncidents, patchGuardStatus } from "@/lib/api";
 import { labelGuardStatus, shortLabelGuardStatus } from "@/lib/guardLabels";
@@ -48,22 +48,22 @@ export function GuardHubScreen() {
     return () => clearInterval(id);
   }, [load]);
 
-  async function onConfirmGoing(id: number) {
+  async function onGoing(id: number) {
     actingRef.current = true;
     setActingId(id);
     setError(null);
     try {
-      await deleteIncident(id);
-      setItems((prev) => prev.filter((x) => x.id !== id));
+      const updated = await patchGuardStatus(id, "going");
+      setItems((prev) => prev.map((x) => (x.id === id ? updated : x)));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Falha ao remover");
+      setError(e instanceof Error ? e.message : "Falha ao atualizar");
     } finally {
       actingRef.current = false;
       setActingId(null);
     }
   }
 
-  async function onDecline(id: number) {
+  async function onNotGoing(id: number) {
     actingRef.current = true;
     setActingId(id);
     setError(null);
@@ -72,6 +72,21 @@ export function GuardHubScreen() {
       setItems((prev) => prev.map((x) => (x.id === id ? updated : x)));
     } catch (e) {
       setError(e instanceof Error ? e.message : "Falha ao atualizar");
+    } finally {
+      actingRef.current = false;
+      setActingId(null);
+    }
+  }
+
+  async function onSolved(id: number) {
+    actingRef.current = true;
+    setActingId(id);
+    setError(null);
+    try {
+      await deleteIncident(id);
+      setItems((prev) => prev.filter((x) => x.id !== id));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Falha ao remover");
     } finally {
       actingRef.current = false;
       setActingId(null);
@@ -161,24 +176,33 @@ export function GuardHubScreen() {
             <p className="mt-3 text-sm text-slate-600">
               {labelGuardStatus(i.guard_status)}
             </p>
-            <div className="mt-4 flex flex-wrap gap-2">
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3">
               <button
                 type="button"
                 disabled={actingId === i.id}
-                onClick={() => onConfirmGoing(i.id)}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 sm:flex-initial sm:min-w-[160px]"
+                onClick={() => onGoing(i.id)}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 disabled:opacity-60"
               >
                 <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
-                {actingId === i.id ? "…" : "Confirmo que vou"}
+                {actingId === i.id ? "…" : "Going"}
               </button>
               <button
                 type="button"
                 disabled={actingId === i.id}
-                onClick={() => onDecline(i.id)}
-                className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-60 sm:flex-initial sm:min-w-[160px]"
+                onClick={() => onNotGoing(i.id)}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3 py-3 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 disabled:opacity-60"
               >
                 <XCircle className="h-4 w-4 shrink-0" aria-hidden />
-                {actingId === i.id ? "…" : "Não posso ir"}
+                {actingId === i.id ? "…" : "Not Going"}
+              </button>
+              <button
+                type="button"
+                disabled={actingId === i.id}
+                onClick={() => onSolved(i.id)}
+                className="col-span-2 inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60 sm:col-span-1"
+              >
+                <BadgeCheck className="h-4 w-4 shrink-0" aria-hidden />
+                {actingId === i.id ? "…" : "Solved"}
               </button>
             </div>
           </li>
